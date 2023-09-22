@@ -38,7 +38,8 @@ module.exports = eva => {
         ]
     ), 20);
 
-    testUtil.test(`
+    testUtil.test(eva, 
+    `
         (begin
             (var x 10)
             (var y 20)
