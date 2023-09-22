@@ -1,67 +1,21 @@
 const assert = require('assert');
 
 const Environment = require('./Environment');
+const { type } = require('os');
 
 class Eva {
 
-    constructor(golbal = new Environment()) {
+    constructor(golbal = GlobalEnvironment) {
         this.global = golbal;
     }
 
     eval(exp, env = this.global) {
         // Self-evaluating expressions
-        if (isNumber(exp)) {
+        if (this._isNumber(exp)) {
             return exp;
         }
-        if(isString(exp)) {
+        if(this._isString(exp)) {
             return exp.slice(1, -1);
-        }
-        if (exp[0] === '+') {
-            let res = this.eval(exp[1], env) + this.eval(exp[2], env);
-            return res;
-        }
-
-        // Math operations
-        if (exp[0] === '*') {
-            let res = this.eval(exp[1], env) * this.eval(exp[2], env);
-            return res;
-        }
-
-        if (exp[0] === '/') {
-            let res = this.eval(exp[1], env) / this.eval(exp[2], env);
-            return res;
-        }
-
-        if (exp[0] === '-') {
-            let res = this.eval(exp[1], env) - this.eval(exp[2], env);
-            return res;
-        }
-
-        // Comparison operations
-
-        if (exp[0] === '>') {
-            let res = this.eval(exp[1], env) > this.eval(exp[2], env);
-            return res;
-        }
-
-        if (exp[0] === '<') {
-            let res = this.eval(exp[1], env) < this.eval(exp[2], env);
-            return res;
-        }
-
-        if (exp[0] === '>=') {
-            let res = this.eval(exp[1], env) >= this.eval(exp[2], env);
-            return res;
-        }
-
-        if (exp[0] === '<=') {
-            let res = this.eval(exp[1], env) <= this.eval(exp[2], env);
-            return res;
-        }
-
-        if (exp[0] === '=') {
-            let res = this.eval(exp[1], env) === this.eval(exp[2], env);
-            return res;
         }
 
         // Variable declarations
@@ -69,7 +23,7 @@ class Eva {
             const[_, name, value] = exp;
             return env.define(name, this.eval(value, env));
         }
-        if (isVariableName(exp)) {
+        if (this._isVariableName(exp)) {
             return env.lookup(exp);
         }
 
@@ -104,6 +58,14 @@ class Eva {
             return res;
         }
 
+        // function calls
+        if (Array.isArray(exp)) {
+            const fn = this.eval(exp[0], env);
+            const args = exp.slice(1).map((arg) => this.eval(arg, env));
+            if (typeof fn === 'function') {
+                return fn(...args);
+            }
+        }
 
         throw `Unimplemented: ${JSON.stringify(exp)}`;
     }
@@ -116,18 +78,45 @@ class Eva {
         });
         return result;
     }
+
+    _isNumber(exp) {
+        return typeof exp === 'number';
+    }
+    
+    _isString(exp) {
+        return typeof exp === 'string' && exp.startsWith('"') && exp.endsWith('"');
+    }
+    
+    _isVariableName(exp) {
+        return typeof exp === 'string' && /^[+\-*/<>=a-zA-Z0-9_]*$/.test(exp);
+    }    
 }
 
-function isNumber(exp) {
-    return typeof exp === 'number';
-}
+// Default Golbal Environment
+const GlobalEnvironment = new Environment({
+    null: null,
+    true: true,
+    false: false,
+    VERSION: '0.1',
 
-function isString(exp) {
-    return typeof exp === 'string' && exp.startsWith('"') && exp.endsWith('"');
-}
+    // Math functions
+    '+': (a, b) => a + b,
+    '-': (a, b = null) => b ? a - b : -a,
+    '*': (a, b) => a * b,
+    '/': (a, b) => a / b,
 
-function isVariableName(exp) {
-    return typeof exp === 'string' && /^[a-zA-Z][a-zA-Z0-9_]*$/.test(exp);
-}
+    // Comparison functions
+    '>': (a, b) => a > b,
+    '<': (a, b) => a < b,
+    '>=': (a, b) => a >= b,
+    '<=': (a, b) => a <= b,
+    '=': (a, b) => a === b,
+
+    // print function
+    print(...args) {
+        console.log(...args);
+    },
+});
+
 
 module.exports = Eva;
