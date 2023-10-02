@@ -58,16 +58,42 @@ class Eva {
             return res;
         }
 
+        // function declarations
+        if (exp[0] === 'def') {
+            const [_tag, name, params, body] = exp;
+            const fn = {
+                params,
+                body,
+                env
+            };
+            return env.define(name, fn);
+        }
+
         // function calls
         if (Array.isArray(exp)) {
             const fn = this.eval(exp[0], env);
             const args = exp.slice(1).map((arg) => this.eval(arg, env));
+            // native functions
             if (typeof fn === 'function') {
                 return fn(...args);
             }
+            // user-defined functions
+            const activationRecord = {};
+            fn.params.forEach((param, index) => {
+                activationRecord[param] = args[index];
+            });
+            const activationEnv = new Environment(activationRecord, fn.env);
+            return this._evalBody(fn.body, activationEnv);
         }
 
         throw `Unimplemented: ${JSON.stringify(exp)}`;
+    }
+
+    _evalBody(body, env) {
+        if (body[0] === 'begin') {
+            return this._evalBlock(body, env);
+        }
+        return this.eval(body, env);
     }
 
     _evalBlock(block, env) {
