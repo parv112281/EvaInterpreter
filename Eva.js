@@ -94,6 +94,9 @@ class Eva {
             return this._evalBody(fn.body, activationEnv);
         }
 
+        // recursive functions
+        
+
         throw `Unimplemented: ${JSON.stringify(exp)}`;
     }
 
